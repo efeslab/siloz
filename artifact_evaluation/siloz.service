@@ -1,0 +1,10 @@
+[Unit]
+Description=Siloz hpage systemd service.
+
+[Service]
+Type=simple
+ExecStart=/bin/bash /root/reserve_hugepages.sh
+
+[Install]
+WantedBy=multi-user.target
+

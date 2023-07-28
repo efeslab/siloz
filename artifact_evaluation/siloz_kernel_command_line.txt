@@ -1,0 +1,1 @@
+GRUB_CMDLINE_LINUX_DEFAULT="numa=1024 kvm.nx_huge_pages=off"
