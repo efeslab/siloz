@@ -1,6 +1,6 @@
-# Siloz: Leveraging DRAM Subarray Groups to Prevent Inter-VM Rowhammer
+# Siloz: Leveraging DRAM Isolation Domains to Prevent Inter-VM Rowhammer
 
-This is the source code for our SOSP 2023 paper "Siloz: Leveraging DRAM Subarray Groups to Prevent Inter-VM Rowhammer". The Siloz prototype is implemented as extensions to the Linux/KVM hypervisor. Specifically, we extend the kernel distributed in Ubuntu 22.04 (tag: [Ubuntu-5.15.0-43.46](https://git.launchpad.net/~ubuntu-kernel/ubuntu/+source/linux/+git/jammy/commit/?id=b8509484e0bab1dd935e504fa1b1f65a3866f0f6)). When using code from this repository, please be sure to cite [the paper](https://www.kevinloughlin.org/siloz.pdf).
+This is the source code for our SOSP 2023 paper "Siloz: Leveraging DRAM Isolation Domains to Prevent Inter-VM Rowhammer". The Siloz prototype is implemented as extensions to the Linux/KVM hypervisor. Specifically, we extend the kernel distributed in Ubuntu 22.04 (tag: [Ubuntu-5.15.0-43.46](https://git.launchpad.net/~ubuntu-kernel/ubuntu/+source/linux/+git/jammy/commit/?id=b8509484e0bab1dd935e504fa1b1f65a3866f0f6)). When using code from this repository, please be sure to cite [the paper](https://www.kevinloughlin.org/siloz.pdf).
 
 NOTE: the Siloz prototype includes implementated support for running natively on dual-socket Intel Skylake and Intel Cascade Lake servers using (1) the physical-to-media address mapping yielded by the default (adaptive) page policy and (2) presumed subarray sizes of 512, 1024, and 2048 rows. Other configurations are not yet supported in the prototype, would require alternate physical-to-media address translation drivers, and may require additional code modifications described in the paper (e.g., offlining potential cross-boundary pages).
 
@@ -8,7 +8,7 @@ This `README.md` provides an overview of Siloz's implementation, as well as inst
 
 ## Implementation Overview
 
-At a high level, Siloz's modifications to the Linux/KVM kernel+hypervisor divide the physical memory space into logical NUMA nodes (each residing on a portion of a single physical NUMA node) that serve as memory isolation domains. Each logical node corresponds to 1 or more complete subarray groups, except for special EPT and guard row logical nodes that carve out a protected sub-region of a host-reserved subarray group on each physical node (i.e., socket). A logical node can be translated to its corresponding physical node (socket 0 or 1) via the function `node_to_pxm(logical_node_number)`. The breakdown of the logical-to-physical node mapping is as follows:
+At a high level, Siloz's modifications to the Linux/KVM kernel+hypervisor divide the physical memory space into logical NUMA nodes (each residing on a portion of a single physical NUMA node) that serve as DRAM isolation domains. Each logical node corresponds to 1 or more complete subarray groups, except for special EPT and guard row logical nodes that carve out a protected sub-region of a host-reserved subarray group on each physical node (i.e., socket). A logical node can be translated to its corresponding physical node (socket 0 or 1) via the function `node_to_pxm(logical_node_number)`. The breakdown of the logical-to-physical node mapping is as follows:
 
 - Logical nodes 0 and 1 are host-reserved and map to socket 0 and 1, respectively.
 - Logical nodes `SOCKET_0_EPT_NODE` and `SOCKET_1_EPT_NODE` are used for EPT pages. They are currently node numbers 2 and 4, respectively.
