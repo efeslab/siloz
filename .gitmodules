@@ -1,3 +1,3 @@
 [submodule "qemu-siloz"]
 	path = qemu-siloz
-	url = git@github.com:efeslab/qemu-siloz.git
+	url = ../qemu-siloz.git
