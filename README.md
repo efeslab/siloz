@@ -1,10 +1,10 @@
 # Siloz: Leveraging DRAM Isolation Domains to Prevent Inter-VM Rowhammer
 
-This is the source code for our SOSP 2023 paper "Siloz: Leveraging DRAM Isolation Domains to Prevent Inter-VM Rowhammer". The Siloz prototype is implemented as extensions to the Linux/KVM hypervisor. Specifically, we extend the kernel distributed in Ubuntu 22.04 (tag: [Ubuntu-5.15.0-43.46](https://git.launchpad.net/~ubuntu-kernel/ubuntu/+source/linux/+git/jammy/commit/?id=b8509484e0bab1dd935e504fa1b1f65a3866f0f6)). When using code from this repository, please be sure to cite [the paper](https://www.kevinloughlin.org/siloz.pdf).
-
-NOTE: the Siloz prototype includes implemented support for running natively on dual-socket Intel Skylake and Intel Cascade Lake servers using (1) the physical-to-media address mapping yielded by the default (adaptive) page policy and (2) presumed subarray sizes of 512, 1024, and 2048 rows. Other configurations are not yet supported in the prototype, would require alternate physical-to-media address translation drivers, and may require additional code modifications described in the paper (e.g., offlining potential cross-boundary pages).
+This is the source code for our SOSP 2023 paper "Siloz: Leveraging DRAM Subarray Groups to Prevent Inter-VM Rowhammer". The Siloz prototype is implemented as extensions to the Linux/KVM hypervisor. Specifically, we extend the kernel distributed in Ubuntu 22.04 (tag: [Ubuntu-5.15.0-43.46](https://git.launchpad.net/~ubuntu-kernel/ubuntu/+source/linux/+git/jammy/commit/?id=b8509484e0bab1dd935e504fa1b1f65a3866f0f6)). When using code from this repository, please be sure to cite [the paper](https://www.kevinloughlin.org/siloz.pdf).
 
 This `README.md` provides an overview of Siloz's implementation, as well as instructions on building and launching Siloz and a guest VM. For information specific to the SOSP 2023 Artifact Evaluation, please see [artifact_evaluation/README.md](https://github.com/efeslab/siloz/tree/main/artifact_evaluation#readme).
+
+NOTE: the Siloz prototype includes implementated support for running natively on dual-socket Intel Skylake and Intel Cascade Lake servers using (1) the physical-to-media address mapping yielded by the default (`adaptive`) DRAM page policy and (2) presumed subarray sizes of 512, 1024, and 2048 rows. Other configurations---including the `close` DRAM page policy---are not yet supported in the prototype, may require alternate physical-to-media address translation drivers, and may require additional code modifications described in the paper (e.g., offlining potential cross-boundary pages). On our test machines, we verified that the `adaptive` page policy is in use via `sudo setpci -s 3a:0a.0 87c.b`, where the least significant bit of the return value should be `0` per "Second Generation Intel® Xeon® Scalable Processors Datasheet, Vol. 2" (section 3.1.2, page 20). We also verified that ADDDC is disabled, which forces the DRAM page policy to `close` if enabled. 
 
 ## Implementation Overview
 
@@ -51,7 +51,7 @@ A per-directory summary of changes made to implement Siloz is listed below; we a
 - Allows full range of guest-reserved nodes to be allocated to guests as HugeTLB pages.
 - Offlines guard row pages.
 - Places `memmap` for each logical node on host-reserved nodes.
-- Ensures host kernel allocations are placed on host-reserved nodes; when possible, allocations host allocations associated with a guest context are placed on the same socket.
+- Ensures host kernel allocations are placed on host-reserved nodes; when possible, host allocations associated with a guest context are placed on the same socket.
 - Ensures cgroup/cpuset logic supersedes mempolicy and node restrictions are enforced.
 - Manages memory stats for different VM regions.
 
@@ -76,13 +76,13 @@ More information on QEMU dependencies and possible issues is available [here](ht
 
 These instructions assume that Siloz is being built in Ubuntu 22.04 on the target server. See `README` (in contrast to this file) for the original Linux kernel README. Note that the build `.config` must include `CONFIG_EDAC_SKX=y` for built-in access to address translation drivers during early boot; the `.config` file provided in this repository is already configured accordingly.
 
-First, clone this repository using `git clone git@github.com:efeslab/siloz.git`. `cd` into the created `siloz` top-level directory; all paths herein are relative to the `siloz` top-level directory unless otherwise noted.
+First, clone this repository using `git clone git@github.com:efeslab/siloz.git` (or `git clone https://github.com/efeslab/siloz.git`). `cd` into the created `siloz` top-level directory; all paths herein are relative to the `siloz` top-level directory unless otherwise noted.
 
 To build Siloz (assuming dependencies are installed), run
 
 `make -j$(nproc)`
 
-Assuming the build environment described in these instructions, all build options should already be appropriately congigured; nonetheless, if you are prompted to configure additional options, the default selections should work, assuming you have not changed the provided `.config`.
+Assuming the build environment described in these instructions, all build options should already be appropriately configured; nonetheless, if you are prompted to configure additional options, the default selections should work, assuming you have not changed the provided `.config`.
 
 To then install Siloz's modules and kernel, run
 
